@@ -1,6 +1,7 @@
 """show_fdb.py
    supported commands:
      *  show mac address-table
+     *  show mac address-table vlan {vlan}
      *  show mac address-table aging-time
      *  show mac address-table learning
 """
@@ -55,12 +56,16 @@ class ShowMacAddressTableSchema(MetaParser):
 class ShowMacAddressTable(ShowMacAddressTableSchema):
     """Parser for show mac address-table"""
 
-    cli_command = 'show mac address-table'
+    cli_command = ['show mac address-table',
+                   'show mac address-table vlan {vlan}']
 
-    def cli(self,output=None):
+    def cli(self, vlan='', output=None):
         if output is None:
             # get output from device
-            out = self.device.execute(self.cli_command)
+            if vlan:
+                out = self.device.execute(self.cli_command[1].format(vlan=vlan))
+            else:
+                out = self.device.execute(self.cli_command[0])
         else:
             out = output
 
@@ -75,7 +80,7 @@ class ShowMacAddressTable(ShowMacAddressTableSchema):
         p3 = re.compile(r'^(?P<intfs>(vPC Peer-Link)?[\w\/\,\(\)]+)$')
         p4 = re.compile(r'^(?P<entry>[\w\*] )?\s*(?P<vlan>All|[\d\-]+) +(?P<mac>[\w.]+)'
             ' +(?P<entry_type>\w+) +(?P<learn>\w+) +(?P<age>[\d\-\~]+) '
-            '+(?P<intfs>(vPC )?[\w\/\,\-\(\)]+)$')
+            '+(?P<intfs>(vPC )?[\w\/\,\-\(\)\s]+)$')
         p5 = re.compile(r'^(?P<entry>[\w\*] )?\s*(?P<vlan>All|[\d\-]+) +(?P<mac>[\w.]+)'
             ' +(?P<entry_type>\w+) +(?P<age>[\d\-\~]+) +(?P<secure>\w+) '
             '+(?P<ntfy>\w+) +(?P<intfs>(vPC )?[\w\/\,\-\(\)]+)$')
@@ -89,9 +94,9 @@ class ShowMacAddressTable(ShowMacAddressTableSchema):
                 ret_dict.update({'total_mac_addresses': int(m.groupdict()['val'])})
                 continue
 
-            # 10    aaaa.bbbb.cccc    STATIC      Gi1/0/8 Gi1/0/9
-            # 20    aaaa.bbbb.cccc    STATIC      Drop
-            # All    0100.0ccc.cccd    STATIC      CPU
+            # 10    aaaa.bbff.8888    STATIC      Gi1/0/8 Gi1/0/9
+            # 20    aaaa.bbff.8888    STATIC      Drop
+            # All    0100.0cff.999a    STATIC      CPU
             m = p2.match(line)
             if m:
                 group = m.groupdict()
@@ -151,8 +156,8 @@ class ShowMacAddressTable(ShowMacAddressTableSchema):
                         intf_dict.update({'age': age})
                 continue
 
-            # *  101  44dd.ee55.ff66   dynamic  Yes         10   Gi1/40
-            # *  102  aa11.bb22.cc33    static  Yes          -   Gi1/2,Gi1/4,Gi1/5,Gi1/6
+            # *  101  44dd.eeff.55bb   dynamic  Yes         10   Gi1/40
+            # *  102  aa11.bbff.ee55    static  Yes          -   Gi1/2,Gi1/4,Gi1/5,Gi1/6
             # *  400  0000.0000.0000    static  No           -   vPC Peer-Link
             # *  ---  0000.0000.0000    static  No           -   Router
             m = p4.match(line)

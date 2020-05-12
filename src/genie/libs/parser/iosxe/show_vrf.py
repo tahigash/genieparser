@@ -59,13 +59,17 @@ class ShowVrf(ShowVrfSchema):
         # Mgmt-intf                        <not set>             ipv4,ipv6   Gi1
         # VRF1                             65000:1               ipv4,ipv6   Tu1
         # vpn4                           100:2          ipv4,ipv6
-        p1 = re.compile(r'^(?P<vrf>\S+)\s+(?P<rd>\<not +set\>|[\d\:]+)\s+'
+        # vpn4                             100:2                 ipv4,ipv6
+        # rb-bcn-lab                       10.116.83.34:1        ipv4,ipv6   Lo9
+        # test                             10.116.83.34:100      ipv4,ipv6   Lo100
+        p1 = re.compile(r'^(?P<vrf>[\w\d\-\.]+)\s+(?P<rd>\<not +set\>|[\.\d\:]+)\s+'
                         r'(?P<protocols>[(?:ipv\d)\,]+)(?:\s+(?P<intf>[\S\s]+))?$')
-                                                                    
+
         # Lo300
         # Gi2.390
         # Gi2.410
-        p2 = re.compile(r'^(?P<intf>[\w\.]+)$')
+        # Te0/0/1
+        p2 = re.compile(r'^(?P<intf>[\w\.\/]+)$')
 
         for line in out.splitlines():
             line = line.strip()
@@ -73,6 +77,10 @@ class ShowVrf(ShowVrfSchema):
             # Mgmt-intf                        <not set>             ipv4,ipv6   Gi1
             # VRF1                             65000:1               ipv4,ipv6   Tu1
             # vpn2                           100:3          ipv4              Lo23  AT3/0/0.1
+            # vpn4                             100:2                 ipv4,ipv6
+            # rb-bcn-lab                       10.116.83.34:1        ipv4,ipv6   Lo9
+            #                                                                    Te0/0/1
+            # test                             10.116.83.34:100      ipv4,ipv6   Lo100
             m = p1.match(line)
             if m:
                 groups = m.groupdict()
@@ -96,6 +104,7 @@ class ShowVrf(ShowVrfSchema):
             # Lo300
             # Gi2.390
             # Gi2.410
+            # Te0/0/1
             m = p2.match(line)
             if m:
                 groups = m.groupdict()
@@ -116,6 +125,7 @@ class ShowVrfDetailSchema(MetaParser):
         Any(): {
             Optional('vrf_id'):  int,
             Optional('description'):  str,
+            Optional('being_deleted'): bool,
             Optional('route_distinguisher'): str,
             Optional('vpn_id'): str,
             Optional('interfaces'): list,
@@ -184,14 +194,17 @@ class ShowVrfDetailSuperParser(ShowVrfDetailSchema):
         # VRF vrf1; default RD 1:1; default VPNID <not set>
         # VRF Down; default RD 100:1; default VPNID <not set> VRF Table ID = 1
         # VRF 12349; default RD 10.4.1.1:20; default VPNID <not set>
+        # VRF DEMO (VRF Id = 12); default RD 65001:1; default VPNID <not set>; being deleted
         p1 = re.compile(r'^VRF +(?P<vrf>[\S]+)( +\(VRF +Id +\= +'
                         r'(?P<vrf_id>\d+)\))?; +default +RD +'
                         r'(?P<rd>[\S\s]+); +default +VPNID +'
                         r'(?P<vpn_id>[\w\s\:\<\>]+)(?: +VRF +'
-                        r'Table +ID +\= +(?P<alt_vrf_id>\d))?$')
+                        r'Table +ID +\= +(?P<alt_vrf_id>\d))?'
+                        r'(?:(?P<being_deleted>; being deleted))?$')
 
         # New CLI format, supports multiple address-families
-        p1_1 = re.compile(r'^(?P<cli_format>(New|Old)) +CLI +format, +supports +(?P<support_af>[\s\S]+)$')
+        p1_1 = re.compile(r'^(?P<cli_format>(New|Old)) +CLI +format,'
+                          r' +supports +(?P<support_af>[\s\S]+)$')
 
         # Flags: 0x180C
         p2 = re.compile(r'^Flags: +(?P<flags>\w+)$')
@@ -205,7 +218,8 @@ class ShowVrfDetailSuperParser(ShowVrfDetailSchema):
         # Address family ipv4 unicast (Table ID = 0x1):
         # Address family ipv4 (Table ID = 2 (0x2)):
         p4 = re.compile(r'^Address +family +(?P<af>[\w\s]+) +'
-                        r'\(Table +ID +\= +(?P<table_id>\w+)( *[\w\(\)]+)?\):$')
+                        r'\(Table +ID +\= +(?P<table_id>\w+)'
+                        r'( *[\w\(\)]+)?\)(:|;)?(?: being deleted:)?$')
 
         # VRF Table ID = 2
         p5 = re.compile(r'^VRF +Table +ID += +(?P<table_id>\d+)$')
@@ -260,12 +274,16 @@ class ShowVrfDetailSuperParser(ShowVrfDetailSchema):
             # VRF vrf1; default RD 1:1; default VPNID <not set>
             # VRF Down; default RD 100:1; default VPNID <not set> VRF Table ID = 1
             # VRF 12349; default RD 10.4.1.1:20; default VPNID <not set>
+            # VRF DEMO (VRF Id = 12); default RD 65001:1; default VPNID <not set>; being deleted
             m = p1.match(line)
             if m:
                 groups = m.groupdict()
                 vrf = groups['vrf']
 
                 vrf_dict = result_dict.setdefault(vrf, {})
+
+                if groups['being_deleted']:
+                    vrf_dict.update({'being_deleted': True})
 
                 if groups['vrf_id']:
                     vrf_dict.update({'vrf_id': int(groups['vrf_id'])})

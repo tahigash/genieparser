@@ -136,7 +136,8 @@ class ShowAccessLists(ShowAccessListsSchema):
         # IP access list acl_name
         # IP access list test22
         # IP access list NTP-ACL
-        p1_ip = re.compile(r'^IP +access +list +(?P<name>\S+)$')
+        # IPV4 ACL 1
+        p1_ip = re.compile(r'^((IP +access +list)|(IPV4 +ACL)) +(?P<name>\S+)$')
 
         # IPv6 access list ipv6_acl
         p1_ipv6 = re.compile(r'^IPv6 +access +list +(?P<name>\S+)$')
@@ -169,11 +170,11 @@ class ShowAccessLists(ShowAccessListsSchema):
                            r'(?: +\[match=(?P<match>\d+)\])?(?: +(?P<logging>log))?$')
 
         # --- MAC access list ---
-        # 10 permit aaaa.bbbb.cccc 0000.0000.0000 bbbb.cccc.dddd bbbb.cccc.dddd aarp
+        # 10 permit aaaa.bbff.8888 0000.0000.0000 bbbb.ccff.aaaa bbbb.ccff.aaaa aarp
         # 20 permit 0000.0000.0000 0000.0000.0000 any
-        # 30 deny 0000.0000.0000 0000.0000.0000 aaaa.bbbb.cccc 0000.0000.0000 0x8041
+        # 30 deny 0000.0000.0000 0000.0000.0000 aaaa.bbff.8888 0000.0000.0000 0x8041
         # 40 deny any any vlan 10
-        # 50 permit aaaa.aaaa.aaaa ffff.ffff.0000 any aarp
+        # 50 permit aaaa.aaff.5555 ffff.ffff.0000 any aarp
         p2_mac = re.compile(r'^(?P<seq>\S+) +(?P<actions_forwarding>permit|deny) '
                             r'+(?P<source_mac_address>any|host|[\w]{4}.[\w]{4}.[\w]{4}'
                             r'(?: [\w]{4}.[\w]{4}.[\w]{4})?) '
@@ -189,6 +190,7 @@ class ShowAccessLists(ShowAccessListsSchema):
             # IP access list acl_name
             # IP access list test22
             # IP access list NTP-ACL
+            # IPV4 ACL 1
             m_ip = p1_ip.match(line)
 
             # IPv6 access list ipv6_acl
@@ -246,7 +248,7 @@ class ShowAccessLists(ShowAccessListsSchema):
                 if protocol is ('ipv4' or 'ipv6'):
                     protocol_name = protocol
                 else:
-                    if acl_dict['type'] is 'ipv6-acl-type':
+                    if acl_dict['type'] == 'ipv6-acl-type':
                         protocol_name = 'ipv6'
                     else:
                         protocol_name = 'ipv4'

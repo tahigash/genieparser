@@ -30,14 +30,17 @@ from genie.libs.parser.ios.show_interface import \
                                         ShowInterfacesSwitchport, \
                                         ShowInterfacesTrunk, \
                                         ShowInterfacesStats,\
-                                        ShowInterfacesDescription
+                                        ShowInterfacesDescription, \
+                                        ShowInterfacesStatus
 
 from genie.libs.parser.iosxe.tests.test_show_interface import \
                 TestShowInterfacesCounters as TestShowInterfacesCounters_iosxe,\
                 TestShowInterfacesSwitchport as TestShowInterfacesSwitchport_iosxe,\
                 TestShowInterfacesTrunk as TestShowInterfacesTrunk_iosxe,\
                 TestShowInterfacesStats as TestShowInterfacesStats_iosxe,\
-                TestShowInterfacesDescription as TestShowInterfacesDescription_iosxe
+                TestShowInterfacesDescription as TestShowInterfacesDescription_iosxe, \
+                TestShowInterfacesStatus as TestShowInterfacesStatus_iosxe
+
 
 class TestShowInterfaceParsergen(unittest.TestCase):
 
@@ -136,6 +139,7 @@ class TestShowIpInterfacesBriefPipeIp(unittest.TestCase):
 class TestShowInterfaces(unittest.TestCase):
     device = Device(name='aDevice')
     empty_output = {'execute.return_value': ''}
+    maxDiff = None
     golden_parsed_output = {
         "GigabitEthernet0/2.1": {
             "reliability": "255/255",
@@ -159,9 +163,9 @@ class TestShowInterfaces(unittest.TestCase):
                     "prefix_length": "24"
                }
             },
-            "mac_address": "fa16.3e4b.55fd",
+            "mac_address": "fa16.3eff.a049",
             "bandwidth": 1000000,
-            "phys_address": "fa16.3e4b.55fd",
+            "phys_address": "fa16.3eff.a049",
             "port_channel": {
                "port_channel_member": False
             },
@@ -230,10 +234,10 @@ class TestShowInterfaces(unittest.TestCase):
                "send": False,
                "receive": False
             },
-            "mac_address": "fa16.3e4b.55fd",
+            "mac_address": "fa16.3eff.a049",
             "keepalive": 10,
             "txload": "1/255",
-            "phys_address": "fa16.3e4b.55fd",
+            "phys_address": "fa16.3eff.a049",
             "port_channel": {
                "port_channel_member": False
             },
@@ -401,7 +405,7 @@ class TestShowInterfaces(unittest.TestCase):
     }
     golden_output = {'execute.return_value': '''
         GigabitEthernet0/2 is up, line protocol is up 
-          Hardware is iGbE, address is fa16.3e4b.55fd (bia fa16.3e4b.55fd)
+          Hardware is iGbE, address is fa16.3eff.a049 (bia fa16.3eff.a049)
           MTU 1500 bytes, BW 1000000 Kbit/sec, DLY 10 usec, 
              reliability 255/255, txload 1/255, rxload 1/255
           Encapsulation 802.1Q Virtual LAN, Vlan ID  1., loopback not set
@@ -428,7 +432,7 @@ class TestShowInterfaces(unittest.TestCase):
              1 lost carrier, 0 no carrier, 0 pause output
              0 output buffer failures, 0 output buffers swapped out
         GigabitEthernet0/2.1 is up, line protocol is up 
-          Hardware is iGbE, address is fa16.3e4b.55fd (bia fa16.3e4b.55fd)
+          Hardware is iGbE, address is fa16.3eff.a049 (bia fa16.3eff.a049)
           Internet address is 192.168.154.1/24
           MTU 1500 bytes, BW 1000000 Kbit/sec, DLY 10 usec, 
              reliability 255/255, txload 1/255, rxload 1/255
@@ -496,6 +500,342 @@ class TestShowInterfaces(unittest.TestCase):
 
     '''}
 
+    golden_parsed_output_2 = {
+        'Embedded-Service-Engine0/0': {
+            'arp_timeout': '04:00:00',
+            'arp_type': 'arpa',
+            'bandwidth': 10000,
+            'counters': {
+                'in_broadcast_pkts': 0,
+                'in_crc_errors': 0,
+                'in_errors': 0,
+                'in_frame': 0,
+                'in_giants': 0,
+                'in_ignored': 0,
+                'in_multicast_pkts': 0,
+                'in_no_buffer': 0,
+                'in_octets': 0,
+                'in_overrun': 0,
+                'in_pkts': 0,
+                'in_runts': 0,
+                'in_throttles': 0,
+                'in_with_dribble': 0,
+                'last_clear': 'never',
+                'out_babble': 0,
+                'out_buffer_failure': 0,
+                'out_buffers_swapped': 0,
+                'out_collision': 0,
+                'out_deferred': 0,
+                'out_errors': 0,
+                'out_interface_resets': 0,
+                'out_late_collision': 0,
+                'out_lost_carrier': 0,
+                'out_no_carrier': 0,
+                'out_octets': 0,
+                'out_pkts': 0,
+                'out_underruns': 0,
+                'out_unknown_protocl_drops': 0,
+                'rate': {
+                    'in_rate': 0,
+                    'in_rate_pkts': 0,
+                    'load_interval': 300,
+                    'out_rate': 0,
+                    'out_rate_pkts': 0,
+                },
+            },
+            'delay': 1000,
+            'enabled': False,
+            'encapsulations': {
+                'encapsulation': 'arpa',
+            },
+            'keepalive': 10,
+            'last_input': 'never',
+            'last_output': 'never',
+            'line_protocol': 'down',
+            'mac_address': '0000.0000.0000',
+            'mtu': 1500,
+            'oper_status': 'down',
+            'output_hang': 'never',
+            'phys_address': '0000.0000.0000',
+            'port_channel': {
+                'port_channel_member': False,
+            },
+            'queues': {
+                'input_queue_drops': 0,
+                'input_queue_flushes': 0,
+                'input_queue_max': 64,
+                'input_queue_size': 0,
+                'output_queue_max': 40,
+                'output_queue_size': 0,
+                'queue_strategy': 'fifo',
+                'total_output_drop': 0,
+            },
+            'reliability': '255/255',
+            'rxload': '1/255',
+            'txload': '1/255',
+            'type': 'Embedded Service Engine',
+        },
+        'GigabitEthernet0/0': {
+            'arp_timeout': '04:00:00',
+            'arp_type': 'arpa',
+            'bandwidth': 100000,
+            'counters': {
+                'in_broadcast_pkts': 0,
+                'in_crc_errors': 0,
+                'in_errors': 0,
+                'in_frame': 0,
+                'in_giants': 0,
+                'in_ignored': 0,
+                'in_mac_pause_frames': 0,
+                'in_multicast_pkts': 1837369,
+                'in_no_buffer': 0,
+                'in_octets': 2700786656,
+                'in_overrun': 0,
+                'in_pkts': 38129643,
+                'in_runts': 0,
+                'in_throttles': 0,
+                'in_watchdog': 0,
+                'last_clear': 'never',
+                'out_babble': 0,
+                'out_buffer_failure': 0,
+                'out_buffers_swapped': 0,
+                'out_collision': 0,
+                'out_deferred': 0,
+                'out_errors': 0,
+                'out_interface_resets': 2,
+                'out_late_collision': 0,
+                'out_lost_carrier': 0,
+                'out_mac_pause_frames': 0,
+                'out_no_carrier': 0,
+                'out_octets': 256973121,
+                'out_pkts': 3553802,
+                'out_underruns': 0,
+                'out_unknown_protocl_drops': 181716,
+                'rate': {
+                    'in_rate': 7000,
+                    'in_rate_pkts': 13,
+                    'load_interval': 300,
+                    'out_rate': 0,
+                    'out_rate_pkts': 0,
+                },
+            },
+            'delay': 100,
+            'description': '************',
+            'duplex_mode': 'full',
+            'enabled': True,
+            'encapsulations': {
+                'encapsulation': 'arpa',
+            },
+            'flow_control': {
+                'receive': False,
+                'send': False,
+            },
+            'ipv4': {
+                '192.168.151.3/24': {
+                    'ip': '192.168.151.3',
+                    'prefix_length': '24',
+                },
+            },
+            'keepalive': 10,
+            'last_input': '00:00:00',
+            'last_output': '00:00:01',
+            'line_protocol': 'up',
+            'mac_address': '10f3.11ff.5167',
+            'media_type': 'RJ45',
+            'mtu': 1500,
+            'oper_status': 'up',
+            'output_hang': 'never',
+            'phys_address': '10f3.11ff.5167',
+            'port_channel': {
+                'port_channel_member': False,
+            },
+            'port_speed': '100mbps',
+            'queues': {
+                'input_queue_drops': 0,
+                'input_queue_flushes': 0,
+                'input_queue_max': 75,
+                'input_queue_size': 0,
+                'output_queue_max': 40,
+                'output_queue_size': 0,
+                'queue_strategy': 'fifo',
+                'total_output_drop': 0,
+            },
+            'reliability': '255/255',
+            'rxload': '1/255',
+            'txload': '1/255',
+            'type': 'CN Gigabit Ethernet',
+        },
+        'GigabitEthernet0/1': {
+            'arp_timeout': '04:00:00',
+            'arp_type': 'arpa',
+            'bandwidth': 1000000,
+            'counters': {
+                'in_broadcast_pkts': 0,
+                'in_crc_errors': 0,
+                'in_errors': 0,
+                'in_frame': 0,
+                'in_giants': 0,
+                'in_ignored': 0,
+                'in_mac_pause_frames': 0,
+                'in_multicast_pkts': 0,
+                'in_no_buffer': 0,
+                'in_octets': 0,
+                'in_overrun': 0,
+                'in_pkts': 0,
+                'in_runts': 0,
+                'in_throttles': 0,
+                'in_watchdog': 0,
+                'last_clear': 'never',
+                'out_babble': 0,
+                'out_buffer_failure': 0,
+                'out_buffers_swapped': 0,
+                'out_collision': 0,
+                'out_deferred': 0,
+                'out_errors': 0,
+                'out_interface_resets': 0,
+                'out_late_collision': 0,
+                'out_lost_carrier': 0,
+                'out_mac_pause_frames': 0,
+                'out_no_carrier': 0,
+                'out_octets': 0,
+                'out_pkts': 0,
+                'out_underruns': 0,
+                'out_unknown_protocl_drops': 0,
+                'rate': {
+                    'in_rate': 0,
+                    'in_rate_pkts': 0,
+                    'load_interval': 300,
+                    'out_rate': 0,
+                    'out_rate_pkts': 0,
+                },
+            },
+            'delay': 10,
+            'duplex_mode': 'auto',
+            'enabled': False,
+            'encapsulations': {
+                'encapsulation': 'arpa',
+            },
+            'flow_control': {
+                'receive': False,
+                'send': False,
+            },
+            'keepalive': 10,
+            'last_input': 'never',
+            'last_output': 'never',
+            'line_protocol': 'down',
+            'mac_address': '10f3.11ff.5168',
+            'media_type': 'RJ45',
+            'mtu': 1500,
+            'oper_status': 'down',
+            'output_hang': 'never',
+            'phys_address': '10f3.11ff.5168',
+            'port_channel': {
+                'port_channel_member': False,
+            },
+            'port_speed': 'auto speed',
+            'queues': {
+                'input_queue_drops': 0,
+                'input_queue_flushes': 0,
+                'input_queue_max': 75,
+                'input_queue_size': 0,
+                'output_queue_max': 40,
+                'output_queue_size': 0,
+                'queue_strategy': 'fifo',
+                'total_output_drop': 0,
+            },
+            'reliability': '255/255',
+            'rxload': '1/255',
+            'txload': '1/255',
+            'type': 'CN Gigabit Ethernet',
+        },
+    }
+
+    golden_output_2 = {'execute.return_value': '''
+        genie#
+        show interfaces
+        Embedded-Service-Engine0/0 is administratively down, line protocol is down
+        Hardware is Embedded Service Engine, address is 0000.0000.0000 (bia 0000.0000.0000)
+        MTU 1500 bytes, BW 10000 Kbit/sec, DLY 1000 usec,
+        reliability 255/255, txload 1/255, rxload 1/255
+        Encapsulation ARPA, loopback not set
+        Keepalive set (10 sec)
+        ARP type: ARPA, ARP Timeout 04:00:00
+        Last input never, output never, output hang never
+        Last clearing of "show interface" counters never
+        Input queue: 0/64/0/0 (size/max/drops/flushes); Total output drops: 0
+        Queueing strategy: fifo
+        Output queue: 0/40 (size/max)
+        5 minute input rate 0 bits/sec, 0 packets/sec
+        5 minute output rate 0 bits/sec, 0 packets/sec
+        0 packets input, 0 bytes, 0 no buffer
+        Received 0 broadcasts (0 IP multicasts)
+        0 runts, 0 giants, 0 throttles
+        0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored
+        0 input packets with dribble condition detected
+        0 packets output, 0 bytes, 0 underruns
+        0 output errors, 0 collisions, 0 interface resets
+        0 unknown protocol drops
+        0 babbles, 0 late collision, 0 deferred
+        0 lost carrier, 0 no carrier
+        0 output buffer failures, 0 output buffers swapped out
+        GigabitEthernet0/0 is up, line protocol is up
+        Hardware is CN Gigabit Ethernet, address is 10f3.11ff.5167 (bia 10f3.11ff.5167)
+        Description: ************
+        Internet address is 192.168.151.3/24
+        MTU 1500 bytes, BW 100000 Kbit/sec, DLY 100 usec,
+        reliability 255/255, txload 1/255, rxload 1/255
+        Encapsulation ARPA, loopback not set
+        Keepalive set (10 sec)
+        Full Duplex, 100Mbps, media type is RJ45
+        output flow-control is unsupported, input flow-control is unsupported
+        ARP type: ARPA, ARP Timeout 04:00:00
+        Last input 00:00:00, output 00:00:01, output hang never
+        Last clearing of "show interface" counters never
+        Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0
+        Queueing strategy: fifo
+        Output queue: 0/40 (size/max)
+        5 minute input rate 7000 bits/sec, 13 packets/sec
+        5 minute output rate 0 bits/sec, 0 packets/sec
+        38129643 packets input, 2700786656 bytes, 0 no buffer
+        Received 35509555 broadcasts (0 IP multicasts)
+        0 runts, 0 giants, 0 throttles
+        0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored
+        0 watchdog, 1837369 multicast, 0 pause input
+        3553802 packets output, 256973121 bytes, 0 underruns
+        0 output errors, 0 collisions, 2 interface resets
+        181716 unknown protocol drops
+        0 babbles, 0 late collision, 0 deferred
+        0 lost carrier, 0 no carrier, 0 pause output
+        0 output buffer failures, 0 output buffers swapped out
+        GigabitEthernet0/1 is administratively down, line protocol is down
+        Hardware is CN Gigabit Ethernet, address is 10f3.11ff.5168 (bia 10f3.11ff.5168)
+        MTU 1500 bytes, BW 1000000 Kbit/sec, DLY 10 usec,
+        reliability 255/255, txload 1/255, rxload 1/255
+        Encapsulation ARPA, loopback not set
+        Keepalive set (10 sec)
+        Auto Duplex, Auto Speed, media type is RJ45
+        output flow-control is unsupported, input flow-control is unsupported
+        ARP type: ARPA, ARP Timeout 04:00:00
+        Last input never, output never, output hang never
+        Last clearing of "show interface" counters never
+        Input queue: 0/75/0/0 (size/max/drops/flushes); Total output drops: 0
+        Queueing strategy: fifo
+        Output queue: 0/40 (size/max)
+        5 minute input rate 0 bits/sec, 0 packets/sec
+        5 minute output rate 0 bits/sec, 0 packets/sec
+        0 packets input, 0 bytes, 0 no buffer
+        Received 0 broadcasts (0 IP multicasts)
+        0 runts, 0 giants, 0 throttles
+        0 input errors, 0 CRC, 0 frame, 0 overrun, 0 ignored
+        0 watchdog, 0 multicast, 0 pause input
+        0 packets output, 0 bytes, 0 underruns
+        0 output errors, 0 collisions, 0 interface resets
+        0 unknown protocol drops
+        0 babbles, 0 late collision, 0 deferred
+        0 lost carrier, 0 no carrier, 0 pause output
+        0 output buffer failures, 0 output buffers swapped out
+    '''}
+
     def test_empty(self):
         self.device = Mock(**self.empty_output)
         interface_obj = ShowInterfaces(device=self.device)
@@ -506,8 +846,13 @@ class TestShowInterfaces(unittest.TestCase):
         self.device = Mock(**self.golden_output)
         interface_obj = ShowInterfaces(device=self.device)
         parsed_output = interface_obj.parse()
-        self.maxDiff = None
         self.assertEqual(parsed_output,self.golden_parsed_output)
+        
+    def test_golden_2(self):
+        self.device = Mock(**self.golden_output_2)
+        interface_obj = ShowInterfaces(device=self.device)
+        parsed_output = interface_obj.parse()
+        self.assertEqual(parsed_output,self.golden_parsed_output_2)
 
 
 #############################################################################
@@ -539,7 +884,7 @@ class TestShowIpInterface(unittest.TestCase):
                "224.0.0.5",
                "224.0.0.6"
             ],
-            "sevurity_level": "default",
+            "security_level": "default",
             "split_horizon": True,
             "local_proxy_arp": False,
             "ip_flow_switching": False,
@@ -565,7 +910,7 @@ class TestShowIpInterface(unittest.TestCase):
                "192.168.154.1/24": {
                     "ip": "192.168.154.1",
                     "secondary": False,
-                    "broadcase_address": "255.255.255.255",
+                    "broadcast_address": "255.255.255.255",
                     "prefix_length": "24"
                }
             },
@@ -581,7 +926,7 @@ class TestShowIpInterface(unittest.TestCase):
                "192.168.154.1/24": {
                     "ip": "192.168.154.1",
                     "secondary": False,
-                    "broadcase_address": "255.255.255.255",
+                    "broadcast_address": "255.255.255.255",
                     "prefix_length": "24"
                }
             },
@@ -597,7 +942,7 @@ class TestShowIpInterface(unittest.TestCase):
             "ip_cef_switching_turbo_vector": True,
             "ip_null_turbo_vector": True,
             "router_discovery": False,
-            "sevurity_level": "default",
+            "security_level": "default",
             "split_horizon": True,
             "local_proxy_arp": False,
             "ip_flow_switching": False,
@@ -751,9 +1096,9 @@ class TestShowIpv6Interface(unittest.TestCase):
                     "ip": "2001:db8:405::1:1",
                     "prefix_length": "112"
                },
-               "FE80::F816:3EFF:FE4B:55FD": {
+               "FE80::F816:3EFF:FEFF:A049": {
                     "status": "valid",
-                    "ip": "FE80::F816:3EFF:FE4B:55FD",
+                    "ip": "FE80::F816:3EFF:FEFF:A049",
                     "origin": "link_layer"
                },
                "2001:db8:405::5:2/112": {
@@ -829,7 +1174,7 @@ class TestShowIpv6Interface(unittest.TestCase):
 
     golden_output = {'execute.return_value': '''
         GigabitEthernet0/1.1 is up, line protocol is up
-          IPv6 is enabled, link-local address is FE80::F816:3EFF:FE4B:55FD 
+          IPv6 is enabled, link-local address is FE80::F816:3EFF:FEFF:A049 
           No Virtual link-local address(es):
           Global unicast address(es):
             2001:db8:405::1:1, subnet is 2001:db8:405::1:0/112 
@@ -1067,6 +1412,7 @@ class TestShowInterfacesStats(TestShowInterfacesStats_iosxe):
         parsed_output = obj.parse(interface='GigabitEthernet0/0/0')
         self.assertEqual(parsed_output,self.golden_parsed_output_interface)
 
+
 class TestShowInterfacesDescription(TestShowInterfacesDescription_iosxe):
     """unit test for show interfaces description """
     
@@ -1089,6 +1435,23 @@ class TestShowInterfacesDescription(TestShowInterfacesDescription_iosxe):
         obj = ShowInterfacesDescription(device=self.device)
         parsed_output = obj.parse(interface='Gi0/0')
         self.assertEqual(parsed_output,self.golden_parsed_interface_output)
+
+
+class TestShowInterfacesStatus(TestShowInterfacesStatus_iosxe):
+    """unit test for show interfaces status """
+
+    def test_empty(self):
+        self.device = Mock(**self.empty_output)
+        obj = ShowInterfacesStatus(device=self.device)
+        with self.assertRaises(SchemaEmptyParserError):
+            parsed_output = obj.parse()
+
+    def test_golden(self):
+        self.maxDiff = None
+        self.device = Mock(**self.golden_interface_output1)
+        obj = ShowInterfacesStatus(device=self.device)
+        parsed_output = obj.parse()
+        self.assertEqual(parsed_output, self.golden_parsed_interface_output1)
 
 
 if __name__ == '__main__':

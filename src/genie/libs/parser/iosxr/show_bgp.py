@@ -4503,7 +4503,7 @@ class ShowBgpInstanceSummary(ShowBgpInstanceSummarySchema):
                         ' *(?P<instance>[a-zA-Z0-9\-\_\']+)$')
         p2 = re.compile(r'^\s*VRF: *(?P<vrf>[\S]+)$')
         p3 = re.compile(r'^\s*Address *Family:'
-                        ' *(?P<address_family>[a-zA-Z0-9\s]+)$')
+                        ' *(?P<address_family>[\S\s]+)$')
         p4 = re.compile(r'^\s*BGP *VRF *(?P<bgp_vrf>[A-Z0-9]+), *state:'
                         ' *(?P<vrf_state>[a-zA-Z]+)$')
         p5 = re.compile(r'^\s*BGP *Route *Distinguisher:'
@@ -5027,8 +5027,8 @@ class ShowBgpInstanceAllAll(ShowBgpInstanceAllAllSchema):
                          r'(?: +\(default +for +vrf +(?P<default_vrf>\S+)\))?$')
 
         # *> 2001:db8:cdc9:190::/64   2001:db8:20:1:5::5
-        # *>i[2][0][48][0014.0100.0001][32][10.249.249.10]/136
-        # *> [1][10.4.1.1:1][1234.bcf5.6789.3e11.0505][12564523]/111
+        # *>i[2][0][48][0014.01ff.0001][32][10.249.249.10]/136
+        # *> [1][10.4.1.1:1][1234.bcff.5d7f.3e11.0505][12564523]/111
         p16_1 = re.compile(r'^\s*(?P<status_codes>(i|s|x|S|d|h|\*|\>|\s)+)'
                            r' *(?P<prefix>(?P<ip>[a-z0-9\.\:\[\]]+)\/(?P<mask>\d+))'
                            r'(?: +(?P<next_hop>\S+))?$')
@@ -5207,7 +5207,7 @@ class ShowBgpInstanceAllAll(ShowBgpInstanceAllAllSchema):
                 continue
 
             # *> 2001:db8:cdc9:190::/64   2001:db8:20:1:5::5
-            # *>i[2][0][48][0014.0100.0001][32][10.249.249.10]/136
+            # *>i[2][0][48][0014.01ff.0001][32][10.249.249.10]/136
             m = p16_1.match(line)
             if m:
                 group = m.groupdict()
@@ -5372,7 +5372,15 @@ class ShowBgpSessions(ShowBgpSessionsSchema):
         p1 = re.compile(r'^(?P<neighbor>\S+) +(?P<vrf>\S+) +(?P<spk>\d+) +'
             '(?P<as_number>\d+) +(?P<in_q>\d+) +(?P<out_q>\d+) +'
             '(?P<nbr_state>\w+) +(?P<nsr_state>[\w\s]+)$')
-        
+
+        # 2001:db8:4401:4453::6f9
+        p1_1 = re.compile(r'^(?P<neighbor>[\w\d:]+)$')
+
+        # default 0 65000 0 0 Established NSR Ready
+        p1_2 = re.compile(r'^(?P<vrf>\S+) +(?P<spk>\d+) +'
+                          r'(?P<as_number>\d+) +(?P<in_q>\d+) +(?P<out_q>\d+) +'
+                          r'(?P<nbr_state>\w+) +(?P<nsr_state>[\w\s]+)$')
+
         # BGP instance 0: 'default'
         p2 = re.compile(r'^BGP +instance +\d+: +\'(?P<instance>\S+)\'$')
 
@@ -5408,7 +5416,32 @@ class ShowBgpSessions(ShowBgpSessionsSchema):
                 neighbor_dict.update({'nbr_state': nbr_state})
                 neighbor_dict.update({'nsr_state': nsr_state})
                 continue
-            
+
+            # 2001:db8:4401:4453::6f9
+            m = p1_1.match(line)
+            if m:
+                neighbor = m.groupdict()['neighbor']
+                continue
+
+            # default 0 65000 0 0 Established NSR Ready
+            m = p1_2.match(line)
+            if m:
+                group = m.groupdict()
+                neighbor_dict = ret_dict.setdefault('instance', {}). \
+                                            setdefault(instance, {}). \
+                                            setdefault('vrf', {}). \
+                                            setdefault(group['vrf'], {}). \
+                                            setdefault('neighbors', {}). \
+                                            setdefault(neighbor, {})
+
+                neighbor_dict['spk'] = int(group['spk'])
+                neighbor_dict['as_number'] = int(group['as_number'])
+                neighbor_dict['in_q'] = int(group['in_q'])
+                neighbor_dict['out_q'] = int(group['out_q'])
+                neighbor_dict['nbr_state'] = group['nbr_state']
+                neighbor_dict['nsr_state'] = group['nsr_state']
+                continue
+
             # BGP instance 0: 'default'
             m = p2.match(line)
             if m:
@@ -5741,7 +5774,7 @@ class ShowBgpL2vpnEvpn(ShowBgpL2vpnEvpnSchema):
                 af_dict.update({'local_router_id': local_router_id})
                 continue
 
-            #                     2001:db8:400:13b1:21a:1ff:fe00:161/128
+            #                     2001:db8:400:13b1:21a:1ff:feff:161/128
             m = p3_4.match(line)
             if m:
                 # Get keys
@@ -6028,7 +6061,7 @@ class ShowBgpL2vpnEvpn(ShowBgpL2vpnEvpnSchema):
             # *>i10.21.33.33/32   10.36.3.3         0        100          0 ?
             # l10.34.34.0/24      0.0.0.0                  100      32768 i
             # *>i2001::33/128     ::ffff:10.36.3.3  0        100          0 ?
-            # *>l[2]:[0]:[0]:[48]:[0000.1986.6d99]:[0]:[0.0.0.0]/216
+            # *>l[2]:[0]:[0]:[48]:[0000.19ff.f320]:[0]:[0.0.0.0]/216
             # *>i                 10.186.0.2        0        100          0 ?
             # *>l10.4.1.0/24        0.0.0.0                            100      32768 i
             # *>r10.16.1.0/24        0.0.0.0                4444        100      32768 ?
@@ -6371,8 +6404,8 @@ class ShowBgpL2vpnEvpnAdvertised(ShowBgpL2vpnEvpnAdvertisedSchema):
         # Route Distinguisher: 10.196.7.7:3
         p1 = re.compile(r'^Route +Distinguisher: +(?P<rd>(\S+))$')
 
-        # [2][0][48][7777.7777.0002][0]/104 is advertised to 10.55.0.10
-        # [1][0009.0807.0605.0403.0201][0]/120 is advertised to 10.100.5.5
+        # [2][0][48][7777.77ff.7779][0]/104 is advertised to 10.55.0.10
+        # [1][0009.08ff.0d0c.0403.0201][0]/120 is advertised to 10.100.5.5
         p2 = re.compile(r'^(?P<prefix>\[[^/]+\])/(?P<prefix_length>(\d+)) +is'
                          ' +advertised +to +(?P<neighbor>(\S+))$')
 
@@ -6425,8 +6458,8 @@ class ShowBgpL2vpnEvpnAdvertised(ShowBgpL2vpnEvpnAdvertisedSchema):
                 af = 'l2vpn evpn RD ' + m.groupdict()['rd']
                 continue
 
-            # [2][0][48][7777.7777.0002][0]/104 is advertised to 10.55.0.10
-            # [1][0009.0807.0605.0403.0201][0]/120 is advertised to 10.100.5.5
+            # [2][0][48][7777.77ff.7779][0]/104 is advertised to 10.55.0.10
+            # [1][0009.08ff.0d0c.0403.0201][0]/120 is advertised to 10.100.5.5
             m = p2.match(line)
             if m:
                 group = m.groupdict()

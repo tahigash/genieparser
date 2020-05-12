@@ -11,6 +11,7 @@
     * show interfaces <interface>
     * show ipv6 interface
     * show interfaces accounting
+    * show interfaces status
 """
 
 import os
@@ -67,6 +68,19 @@ class ShowInterfacesSchema(MetaParser):
                 Optional('link_type'): str,
                 Optional('media_type'): str,
                 'mtu': int,
+                Optional('maximum_active_vcs'): str,
+                Optional('vcs_per_vp'): str,
+                Optional('vc_idle_disconnect_time'): str,
+                Optional('vc_auto_creation'): str,
+                Optional('current_vccs'): str,
+                Optional('aal5_crc_errors'): int,
+                Optional('aal5_oversized_sdus'): int,
+                Optional('aal5_sar_timeouts'): int,
+                Optional('vaccess_status'): str,
+                Optional('vaccess_loopback'): str,
+                Optional('base_pppoatm'): str,
+                Optional('dtr_pulsed'): str,
+                Optional('sub_mtu'): int,
                 Optional('medium'): str,
                 Optional('reliability'): str,
                 Optional('txload'): str,
@@ -216,7 +230,7 @@ class ShowInterfaces(ShowInterfacesSchema):
                            r' +line +protocol +is +(?P<line_protocol>\w+)'
                            r'( *, *(?P<attribute>[\w\s]+))?$')
 
-        # Hardware is Gigabit Ethernet, address is 0057.d228.1a64 (bia 0057.d228.1a64)
+        # Hardware is Gigabit Ethernet, address is 0057.d2ff.428c (bia 0057.d2ff.428c)
         # Hardware is Loopback
         p2 = re.compile(r'^Hardware +is +(?P<type>[a-zA-Z0-9\-\/\s\+]+)'
                         r'(, *address +is +(?P<mac_address>[a-z0-9\.]+)'
@@ -235,14 +249,15 @@ class ShowInterfaces(ShowInterfacesSchema):
                         r'\/(?P<prefix_length>[0-9]+))$')
 
         # Internet address is 10.4.4.4/24
-        p5 = re.compile(r'^Internet +[A|a]ddress +is +(?P<ipv4>(?P<ip>[0-9\.]+)'
+        p5 = re.compile(r'^Internet +[A|a]ddress +is +(?P<ipv4>(?P<ip>[0-9\.x]+)'
                         r'\/(?P<prefix_length>[0-9]+))$')
 
         # MTU 1500 bytes, BW 768 Kbit/sec, DLY 3330 usec,
         # MTU 1500 bytes, BW 10000 Kbit, DLY 1000 usec, 
-        p6 = re.compile(r'^MTU +(?P<mtu>[0-9]+) +bytes, +BW'
-                        r' +(?P<bandwidth>[0-9]+) +Kbit(\/sec)?, +DLY'
-                        r' +(?P<delay>[0-9]+) +usec,$')
+        # MTU 1600 bytes, sub MTU 1600, BW 3584 Kbit/sec, DLY 410 usec,
+        p6 = re.compile(r'^MTU +(?P<mtu>\d+) +bytes(, +sub +MTU +'
+                        r'(?P<sub_mtu>\d+))?, +BW +(?P<bandwidth>[0-9]+) +Kbit(\/sec)?, +'
+                        r'DLY +(?P<delay>[0-9]+) +usec,$')
 
         # reliability 255/255, txload 1/255, rxload 1/255
         p7 = re.compile(r'^reliability +(?P<reliability>[\d\/]+),'
@@ -255,8 +270,9 @@ class ShowInterfaces(ShowInterfacesSchema):
         # Encapsulation QinQ Virtual LAN, outer ID  10, inner ID 20
         # Encapsulation 802.1Q Virtual LAN, Vlan ID  1., loopback not set
         # Encapsulation 802.1Q Virtual LAN, Vlan ID  105.
-        p8 = re.compile(r'^Encapsulation +(?P<encapsulation>[\w\s\.]+),'
-                        r' +(?P<rest>.*)$')
+        # Encapsulation(s): AAL5
+        p8 = re.compile(r'^Encapsulation(\(s\):)? +(?P<encapsulation>[\w\s\.]+)'
+                r'(, +(?P<rest>.*))?$')
             
         # Keepalive set (10 sec)
         p10 = re.compile(r'^Keepalive +set +\((?P<keepalive>[0-9]+)'
@@ -400,9 +416,10 @@ class ShowInterfaces(ShowInterfacesSchema):
                           '(?P<out_deferred>[0-9]+) +deferred$')
 
         # 0 lost carrier, 0 no carrier, 0 pause output
-        p33 = re.compile(r'^(?P<out_lost_carrier>[0-9]+) +lost +carrier, +'
-                          '(?P<out_no_carrier>[0-9]+) +no +carrier, +'
-                          '(?P<out_pause_output>[0-9]+) +pause +output$')
+        # 0 lost carrier, 0 no carrier
+        p33 = re.compile(r'^(?P<out_lost_carrier>\d+) +lost +carrier, +'
+                r'(?P<out_no_carrier>\d+) +no +carrier(, +(?P<out_pause_output>\d+) +'
+                r'pause +output)?$')
 
         # 0 output buffer failures, 0 output buffers swapped out
         p34 = re.compile(r'^(?P<out_buffer_failure>[0-9]+) +output +buffer +failures, +'
@@ -413,11 +430,46 @@ class ShowInterfaces(ShowInterfacesSchema):
         p35 = re.compile(r'^Interface +is +unnumbered. +Using +address +of +'
                           '(?P<unnumbered_intf>[\w\/\.]+) +'
                           '\((?P<unnumbered_ip>[\w\.\:]+)\)$')
+        
+        # 8 maximum active VCs, 1024 VCs per VP, 1 current VCCs
+        p36 = re.compile(r'^(?P<maximum_active_vcs>\d+) +maximum +active +VCs, +'
+                r'(?P<vcs_per_vp>\d+) +VCs +per +VP, +(?P<current_vccs>\d+) +current +VCCs$')
+        
+        # VC Auto Creation Disabled.
+        p37 = re.compile(r'^VC +Auto +Creation +(?P<vc_auto_creation>\S+)\.$')
+
+        # VC idle disconnect time: 300 seconds
+        p38 = re.compile(r'^VC +idle +disconnect +time: +(?P<vc_idle_disconnect_time>\d+) +'
+                r'seconds$')
+        
+        # AAL5 CRC errors : 0
+        p39 = re.compile(r'^(?P<key>\S+ +CRC +errors) +: +(?P<val>\d+)$')
+        
+        # AAL5 SAR Timeouts : 0
+        p40 = re.compile(r'^(?P<key>\S+ +SAR +Timeouts) +: +(?P<val>\d+)$')
+        
+        # AAL5 Oversized SDUs : 0
+        p41 = re.compile(r'^(?P<key>\S+ +Oversized +SDUs) +: +(?P<val>\d+)$')
+
+        # LCP Closed
+        # LCP Closed, loopback not set
+        p42 = re.compile(r'^LCP\s+(?P<state>\S+)(,\s+loopback\s+(?P<loopback>[\S\s]+))?$')
+
+        # Base PPPoATM vaccess
+        p43 = re.compile(r'^Base PPPoATM +(?P<base_pppoatm>\S+)$')
+
+        # Vaccess status 0x44, loopback not set
+        p44 = re.compile(r'^Vaccess\s+status\s+(?P<status>\S+),\s+'
+                r'loopback\s+(?P<loopback>[\S\s]+)$')
+
+        # DTR is pulsed for 5 seconds on reset
+        p45 = re.compile(r'^DTR +is +pulsed +for +(?P<dtr_pulsed>\d+) +'
+                r'seconds +on +reset$')
+
         interface_dict = {}
         unnumbered_dict = {}
         for line in out.splitlines():
             line = line.strip()
-            
             # GigabitEthernet1 is up, line protocol is up 
             # Port-channel12 is up, line protocol is up (connected)
             # Vlan1 is administratively down, line protocol is down , Autostate Enabled
@@ -462,7 +514,7 @@ class ShowInterfaces(ShowInterfacesSchema):
 
                 continue
 
-            # Hardware is Gigabit Ethernet, address is 0057.d228.1a64 (bia 0057.d228.1a64)
+            # Hardware is Gigabit Ethernet, address is 0057.d2ff.428c (bia 0057.d2ff.428c)
             # Hardware is Loopback
             m = p2.match(line)
 
@@ -531,11 +583,14 @@ class ShowInterfaces(ShowInterfacesSchema):
             m = p6.match(line)
             if m:
                 mtu = m.groupdict()['mtu']
+                sub_mtu = m.groupdict().get('sub_mtu', None)
                 bandwidth = m.groupdict()['bandwidth']
                 if m.groupdict()['delay']:
                     interface_dict[interface]['delay'] = int(m.groupdict()['delay'])
                 if mtu:
                     interface_dict[interface]['mtu'] = int(mtu)
+                if sub_mtu:
+                    interface_dict[interface]['sub_mtu'] = int(sub_mtu)
                 if bandwidth:
                     interface_dict[interface]['bandwidth'] = int(bandwidth)
                 continue
@@ -569,6 +624,8 @@ class ShowInterfaces(ShowInterfacesSchema):
                     ['encapsulation'] = encapsulation
 
                 rest = m.groupdict()['rest']
+                if not rest:
+                    continue
                 # Vlan ID 20, medium is p2p
                 m1 = re.compile(r'(Vlan +ID +(?P<first_dot1q>[0-9]+),)?'
                                  ' *medium +is +(?P<medium>[a-z0-9]+)$').match(rest)
@@ -991,8 +1048,10 @@ class ShowInterfaces(ShowInterfacesSchema):
                     int(m.groupdict()['out_lost_carrier'])
                 interface_dict[interface]['counters']['out_no_carrier'] = \
                     int(m.groupdict()['out_no_carrier'])
-                interface_dict[interface]['counters']['out_mac_pause_frames'] = \
-                    int(m.groupdict()['out_pause_output'])
+                out_pause_output = m.groupdict().get('out_pause_output', None)
+                if out_pause_output:
+                    interface_dict[interface]['counters']['out_mac_pause_frames'] = \
+                        int(m.groupdict()['out_pause_output'])
                 continue
 
             # 0 output buffer failures, 0 output buffers swapped out
@@ -1011,6 +1070,87 @@ class ShowInterfaces(ShowInterfacesSchema):
                 unnumbered_dict[interface] = {}
                 unnumbered_dict[interface]['unnumbered_intf'] = m.groupdict()['unnumbered_intf']
                 unnumbered_dict[interface]['unnumbered_ip'] = m.groupdict()['unnumbered_ip']
+                continue
+
+            # 8 maximum active VCs, 1024 VCs per VP, 1 current VCCs
+            m = p36.match(line)
+            if m:
+                group = m.groupdict()
+                maximum_active_vcs = group['maximum_active_vcs']
+                vcs_per_vp = group['vcs_per_vp']
+                current_vccs = group['current_vccs']
+                interface_dict[interface].update({'maximum_active_vcs': maximum_active_vcs})
+                interface_dict[interface].update({'vcs_per_vp': vcs_per_vp})
+                interface_dict[interface].update({'current_vccs': current_vccs})
+                continue
+            
+            # VC Auto Creation Disabled.
+            m = p37.match(line)
+            if m:
+                group = m.groupdict()
+                vc_auto_creation = group['vc_auto_creation']
+                interface_dict[interface].update({'vc_auto_creation': vc_auto_creation})
+                continue
+
+            # VC idle disconnect time: 300 seconds
+            m = p38.match(line)
+            if m:
+                group = m.groupdict()
+                vc_idle_disconnect_time = group['vc_idle_disconnect_time']
+                interface_dict[interface].update({'vc_idle_disconnect_time': vc_idle_disconnect_time})
+                continue
+
+            # AAL5 CRC errors : 0
+            m = p39.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'aal5_crc_errors': int(group['val'])})
+                continue
+            
+            # AAL5 SAR Timeouts : 0
+            m = p40.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'aal5_oversized_sdus': int(group['val'])})
+                continue
+
+            # AAL5 Oversized SDUs : 0
+            m = p41.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'aal5_sar_timeouts': int(group['val'])})
+                continue
+
+            # LCP Closed
+            m = p42.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'lcp_state': group['state']})
+                loopback = group.get('loopback', None)
+                if loopback:
+                    interface_dict[interface].update({'lcp_loopack': loopback})
+                continue
+
+            # Base PPPoATM vaccess
+            m = p43.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'base_pppoatm': group['base_pppoatm']})
+                continue
+
+            # Vaccess status 0x44, loopback not set
+            m = p44.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'vaccess_status': group['status']})
+                interface_dict[interface].update({'vaccess_loopback': group['loopback']})
+                continue
+
+            # DTR is pulsed for 5 seconds on reset
+            m = p45.match(line)
+            if m:
+                group = m.groupdict()
+                interface_dict[interface].update({'dtr_pulsed': group['dtr_pulsed']})
                 continue
 
         # create strucutre for unnumbered interface
@@ -1058,6 +1198,7 @@ class ShowIpInterfaceBriefSchema(MetaParser):
                      Optional('protocol'): str}
                 },
             }
+
 
 class ShowIpInterfaceBrief(ShowIpInterfaceBriefSchema):
     """Parser for:
@@ -1139,6 +1280,7 @@ class ShowIpInterfaceBrief(ShowIpInterfaceBriefSchema):
         yang_output = self.yang()
         merged_output = merge_dict(yang_output,cli_output)
         return merged_output
+
 
 class ShowIpInterfaceBriefPipeVlan(ShowIpInterfaceBrief):
     """Parser for:
@@ -1297,6 +1439,7 @@ class ShowIpInterfaceBriefPipeIp(ShowIpInterfaceBriefPipeIpSchema):
 
         return interface_dict
 
+
 class ShowInterfacesSwitchportSchema(MetaParser):
     """Schema for show interfaces switchport"""
     schema = {
@@ -1342,6 +1485,7 @@ class ShowInterfacesSwitchportSchema(MetaParser):
                     Optional('appliance_trust'): str,
                 },
             }
+
 
 class ShowInterfacesSwitchport(ShowInterfacesSwitchportSchema):
     """parser for show interfaces switchport"""
@@ -1733,7 +1877,7 @@ class ShowIpInterfaceSchema(MetaParser):
                             'ip': str,
                             Optional('prefix_length'): str,
                             Optional('secondary'): bool,
-                            Optional('broadcase_address'): str,
+                            Optional('broadcast_address'): str,
                         },
                     },
                     Optional('mtu'): int,
@@ -1746,7 +1890,7 @@ class ShowIpInterfaceSchema(MetaParser):
                     Optional('inbound_access_list'): str,
                     Optional('proxy_arp'): bool,
                     Optional('local_proxy_arp'): bool,
-                    Optional('sevurity_level'): str,
+                    Optional('security_level'): str,
                     Optional('split_horizon'): bool,
                     Optional('icmp'): {
                         Optional('redirects'): str,
@@ -1787,6 +1931,7 @@ class ShowIpInterfaceSchema(MetaParser):
                     Optional('multicast_groups'): list,
                 },
             }
+
 
 class ShowIpInterface(ShowIpInterfaceSchema):
     """Parser for show ip interface
@@ -1889,7 +2034,7 @@ class ShowIpInterface(ShowIpInterfaceSchema):
             p3 = re.compile(r'^Broadcast +address +is +(?P<address>[\w\.\:]+)$')
             m = p3.match(line)
             if m:
-                interface_dict[interface]['ipv4'][address]['broadcase_address'] = \
+                interface_dict[interface]['ipv4'][address]['broadcast_address'] = \
                     m.groupdict()['address']
                 continue
 
@@ -2018,7 +2163,7 @@ class ShowIpInterface(ShowIpInterfaceSchema):
                              '(?P<level>\w+)$')
             m = p13.match(line)
             if m:
-                interface_dict[interface]['sevurity_level'] = m.groupdict()['level']
+                interface_dict[interface]['security_level'] = m.groupdict()['level']
                 continue
 
             # Split horizon is enabled
@@ -2363,7 +2508,6 @@ class ShowIpInterface(ShowIpInterfaceSchema):
         return interface_dict
 
 
-
 class ShowIpv6InterfaceSchema(MetaParser):
     """Schema for show ipv6 interface"""
     schema = {
@@ -2417,6 +2561,7 @@ class ShowIpv6InterfaceSchema(MetaParser):
                 },
             }
 
+
 class ShowIpv6Interface(ShowIpv6InterfaceSchema):
     """Parser for show ipv6 interface"""
     cli_command = ['show ipv6 interface {interface}','show ipv6 interface']
@@ -2465,8 +2610,8 @@ class ShowIpv6Interface(ShowIpv6InterfaceSchema):
                 continue
 
             # IPv6 is enabled, link-local address is FE80::257:D2FF:FE28:
-            # IPv6 is tentative, link-local address is FE80::257:D2FF:FE28:1A64 [TEN]
-            # IPv6 is tentative, link-local address is FE80::257:D2FF:FE28:1A64 [UNA/TEN]
+            # IPv6 is tentative, link-local address is FE80::257:D2FF:FEFF:428C [TEN]
+            # IPv6 is tentative, link-local address is FE80::257:D2FF:FEFF:428C [UNA/TEN]
             p2 = re.compile(r'^IPv6 +is +(?P<status>\w+), +'
                              'link-local +address +is +(?P<link_local>[\w\:]+)'
                              '( *\[(?P<type>[\w\/]+)\])?$')
@@ -2825,6 +2970,7 @@ class ShowInterfacesTrunkSchema(MetaParser):
         }
     }
 
+
 class ShowInterfacesTrunk(ShowInterfacesTrunkSchema):
     """parser for show interfaces trunk"""
     cli_command = 'show interfaces trunk'
@@ -2904,6 +3050,7 @@ class ShowInterfacesCountersSchema(MetaParser):
             },
         }
     }
+
 
 class ShowInterfacesCounters(ShowInterfacesCountersSchema):
     """parser for show interfaces <WORD> counters"""
@@ -3110,11 +3257,11 @@ class ShowInterfacesStats(ShowInterfacesStatsSchema):
                 continue
 
         return result_dict
-        
+
+
 # ====================================================
 #  parser for show interfaces description
 # ====================================================
-
 class ShowInterfacesDescriptionSchema(MetaParser):
     """schema for show interfaces description
     """
@@ -3128,6 +3275,7 @@ class ShowInterfacesDescriptionSchema(MetaParser):
             }
         }
     }
+
 
 class ShowInterfacesDescription(ShowInterfacesDescriptionSchema):
     """parser for show interfaces description
@@ -3173,3 +3321,84 @@ class ShowInterfacesDescription(ShowInterfacesDescriptionSchema):
                 continue
 
         return result_dict
+
+
+# ====================================================
+#  schema for show interfaces status
+# ====================================================
+class ShowInterfacesStatusSchema(MetaParser):
+    """Schema for:
+        show interfaces status"""
+
+    schema = {
+        'interfaces': {
+            Any(): {
+                Optional('name'): str,
+                'status': str,
+                'vlan': str,
+                'duplex_code': str,
+                'port_speed': str,
+                Optional('type'): str,
+            }
+        }
+    }
+
+
+# ====================================================
+#  parser for show interfaces status
+# ====================================================
+class ShowInterfacesStatus(ShowInterfacesStatusSchema):
+    """parser for 
+            * show interfaces status
+        """
+
+    cli_command = 'show interfaces status'
+
+    def cli(self, output=None):
+        if output is None:
+            out = self.device.execute(self.cli_command)
+        else:
+            out = output
+
+        result_dict = {}
+
+        # Port      Name               Status       Vlan       Duplex  Speed Type
+        # Gi1/2     TelenlqPOIU        notconnect   125          full    100 10/100/1000-TX
+        # Gi1/3     SE                 connected    132        a-full a-1000 10/100/1000-TX
+        # Gi1/7                        notconnect   99           auto   auto 10/100/1000-TX
+        # Gi1/10    To cft123          connected    trunk      a-full a-1000 10/100/1000-TX
+        # Gi1/1/0/1 FAST-HELLO         connected    4094       a-full a-1000 10/100/1000BaseTX
+        # Te1/1/2   VSL                connected    trunk        full  a-10G 10GBase-SR
+        # Te2/1/20                     disabled     1            full   auto No XCVR
+        # Te2/1/21  VSL LINK1          disabled     1            full   auto No XCVR
+        # Po10      VSL LINK2          connected    trunk      a-full  a-10G
+
+        p1 = re.compile(r'^(?P<interfaces>\S+)(?: +(?P<name>([\S ]+)))?'
+                        r' +(?P<status>(connected|notconnect|suspended|inactive|disabled|err-disabled|monitoring))'
+                        r' +(?P<vlan>\S+) +(?P<duplex_code>[\S\-]+) +(?P<port_speed>[\S\-]+)( +(?P<type>.+))?$')
+
+        for line in out.splitlines():
+            line = line.strip()
+
+            m = p1.match(line)
+            if m:
+                group = m.groupdict()
+
+                intf_dict = result_dict.setdefault('interfaces', {}).\
+                                        setdefault(Common.convert_intf_name(group['interfaces']), {})
+
+                name_val = group['name'].strip()
+                if len(name_val)>0 :
+                    intf_dict['name'] = name_val
+
+                keys = ['status',
+                        'vlan', 'duplex_code', 'port_speed',
+                        'type']
+
+                for k in keys:
+                    if group[k]:
+                        intf_dict[k] = group[k].strip()
+                continue
+
+        return result_dict
+
