@@ -28,7 +28,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyats[full]
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-        pip uninstall genie.libs.parser
+        pip uninstall genie.libs.parser -y
 #    - name: Lint with flake8
 #      run: |
 #        # stop the build if there are Python syntax errors or undefined names
